@@ -264,11 +264,21 @@ scripts/                      WordPress reader and importer
    | `DATABASE_URL` | Supabase transaction pooler, port 6543 |
    | `DIRECT_URL` | Supabase direct connection, port 5432 |
    | `ADMIN_API_KEY` | `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
-   | `NEXT_PUBLIC_SITE_URL` | The deployed origin, e.g. `https://tactyqal-labs.vercel.app` |
+   | `NEXT_PUBLIC_SITE_URL` | The deployed origin, e.g. `https://tactyqal-labs.vercel.app`. **Must not be marked Sensitive** — see below. |
 
 5. Deploy. The build runs `prisma generate` before `next build`, so no extra build command is needed.
 
-`NEXT_PUBLIC_SITE_URL` must be the real origin: canonical tags, Open Graph URLs and all 897 sitemap entries are built from it.
+### NEXT_PUBLIC_SITE_URL cannot be a Sensitive variable
+
+Anything prefixed `NEXT_PUBLIC_` is inlined into the browser bundle at build time, so it is public by definition. Vercel refuses the combination and reports:
+
+> Environment variables with a public framework prefix cannot use `visibility: secret`. Use `visibility: config` instead.
+
+Add it as an ordinary variable with Sensitive turned off. `DATABASE_URL`, `DIRECT_URL` and `ADMIN_API_KEY` are read only on the server and should stay Sensitive.
+
+Because the value is baked in at build time, **changing it requires a redeploy** — saving it alone changes nothing.
+
+If it is missing, or left pointing at localhost while deployed, the app falls back to the deployment's own Vercel URL rather than shipping canonical tags and a sitemap full of `http://localhost:3000`.
 
 ## Production notes
 
