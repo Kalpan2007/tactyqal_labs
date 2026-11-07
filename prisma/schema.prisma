@@ -1,0 +1,118 @@
+// Tactyqal Labs blog backend.
+//
+// Replaces the separate WordPress install with a typed schema that lives in the
+// same repository and the same stack as the website.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  SCHEDULED
+  CLOSED
+}
+
+/// Someone who writes posts. Kept separate from Post so an author can be
+/// renamed or given a new bio without touching any article.
+model Author {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  role      String?
+  bio       String?
+  avatarUrl String?
+  posts     Post[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("authors")
+}
+
+/// One category per post: the primary section an article belongs to.
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  posts       Post[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("categories")
+}
+
+/// Many tags per post, for cross-cutting topics.
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  posts     Post[]   @relation("PostTags")
+  createdAt DateTime @default(now())
+
+  @@map("tags")
+}
+
+model Post {
+  id              String     @id @default(cuid())
+  title           String
+  /// Generated from the title when not supplied. Unique, so it can be the URL.
+  slug            String     @unique
+  excerpt         String
+  /// Markdown. Rendered safely at read time, never stored as HTML.
+  content         String
+  coverImageUrl   String?
+  coverImageAlt   String?
+  status          PostStatus @default(DRAFT)
+  featured        Boolean    @default(false)
+  /// Derived from the word count on every write, so it can never drift.
+  readTimeMinutes Int        @default(1)
+  viewCount       Int        @default(0)
+  seoTitle        String?
+  seoDescription  String?
+  /// Set automatically the first time a post moves to PUBLISHED.
+  publishedAt     DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  authorId   String
+  author     Author    @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  tags       Tag[]     @relation("PostTags")
+
+  // The public list query is always "published, newest first".
+  @@index([status, publishedAt(sort: Desc)])
+  @@index([categoryId])
+  @@index([featured])
+  @@map("posts")
+}
+
+/// A consultation request from the homepage form.
+model Lead {
+  id         String     @id @default(cuid())
+  parentName String
+  email      String
+  phone      String
+  studentAge String
+  idea       String?
+  source     String     @default("homepage")
+  status     LeadStatus @default(NEW)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  @@index([status, createdAt(sort: Desc)])
+  @@map("leads")
+}

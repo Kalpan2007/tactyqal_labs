@@ -1,0 +1,139 @@
+@import "tailwindcss";
+@import "@fontsource-variable/archivo/wdth.css";
+@plugin "@tailwindcss/typography";
+
+/*
+  Design tokens. To switch the accent back to Tactyqal's teal,
+  change --color-gold / --color-gold-soft only.
+*/
+@theme {
+  --color-night: #1b1b1b;
+  --color-night-2: #262626;
+  --color-snow: #ffffff;
+  --color-fog: #f0f0f0;
+  --color-rule: #e2e2e2;
+  --color-rule-dark: #3a3a3a;
+  --color-mute: #8a8a8a;
+  --color-mute-dark: #a3a3a3;
+  --color-gold: #dcbf6c;
+  --color-gold-soft: #f3e8c8;
+
+  --font-sans: "Archivo Variable", ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 6rem;
+}
+
+body {
+  background: var(--color-snow);
+  color: var(--color-night);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Wide, light display type: the signature of the reference */
+.display {
+  font-stretch: 118%;
+  font-weight: 300;
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+.wide {
+  font-stretch: 112%;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+/* ---------- Motion ---------- */
+
+/* Masked line rise, used for the big headings */
+.rise > span {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.08em;
+}
+.rise > span > span {
+  display: block;
+  transform: translateY(105%);
+  transition: transform 0.9s cubic-bezier(0.2, 0.75, 0.2, 1);
+}
+.rise.is-in > span > span {
+  transform: none;
+}
+.rise.is-in > span:nth-child(2) > span {
+  transition-delay: 0.08s;
+}
+.rise.is-in > span:nth-child(3) > span {
+  transition-delay: 0.16s;
+}
+
+/* Giant wordmark: each letter rises and darkens as it scrolls in */
+.wordmark span {
+  display: inline-block;
+  transform: translateY(40%);
+  opacity: 0;
+  transition:
+    transform 0.9s cubic-bezier(0.2, 0.75, 0.2, 1),
+    opacity 0.9s ease;
+}
+.wordmark.is-in span {
+  transform: none;
+  opacity: 1;
+}
+
+/* Gold line drawings draw themselves in */
+.draw path,
+.draw line {
+  stroke-dasharray: 600;
+  stroke-dashoffset: 600;
+  transition: stroke-dashoffset 1.6s ease 0.3s;
+}
+.draw.is-in path,
+.draw.is-in line {
+  stroke-dashoffset: 0;
+}
+
+@keyframes fadein {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+.marquee {
+  animation: marquee 40s linear infinite;
+}
+.marquee:hover {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .rise > span > span,
+  .wordmark span {
+    transform: none !important;
+    opacity: 1 !important;
+    transition: none !important;
+  }
+  .draw path,
+  .draw line {
+    stroke-dashoffset: 0 !important;
+    transition: none !important;
+  }
+  .marquee {
+    animation: none;
+  }
+}
