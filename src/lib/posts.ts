@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
 import { autoExcerpt, readTimeMinutes, slugify } from "@/lib/api/text";
@@ -105,13 +106,19 @@ export async function listPosts(q: ListPostsQuery) {
   };
 }
 
-/** Accepts either a slug or an id, so clients never have to care which they hold. */
-export function findPost(idOrSlug: string) {
-  return prisma.post.findFirst({
+/**
+ * Accepts either a slug or an id, so clients never have to care which they hold.
+ *
+ * Wrapped in React's `cache` so the article page and its `generateMetadata`
+ * share one query instead of fetching the same row twice — which halves the
+ * database round trips both at build time and per request.
+ */
+export const findPost = cache((idOrSlug: string) =>
+  prisma.post.findFirst({
     where: { OR: [{ slug: idOrSlug }, { id: idOrSlug }] },
     select: postSelect,
-  });
-}
+  }),
+);
 
 export async function createPost(input: CreatePostInput): Promise<PostDto> {
   const slug = await uniqueSlug(input.slug ?? input.title);
@@ -185,8 +192,19 @@ export function deletePost(id: string) {
   return prisma.post.delete({ where: { id }, select: { id: true, slug: true } });
 }
 
-/** Fire-and-forget view counter: a failure here must never break a page render. */
+/**
+ * Fire-and-forget view counter. A failure here must never break a page render.
+ *
+ * Skipped during `next build`: prerendering 24 articles is not 24 readers, and
+ * it would add a write per page to a build that may already be talking to a
+ * database in another region.
+ *
+ * Caveat worth knowing: article pages are statically generated and revalidated
+ * hourly, so this increments once per render, not once per visitor. It is an
+ * indication of activity, not analytics.
+ */
 export function recordView(id: string) {
+  if (process.env.NEXT_PHASE === "phase-production-build") return Promise.resolve(undefined);
   return prisma.post
     .update({ where: { id }, data: { viewCount: { increment: 1 } }, select: { id: true } })
     .catch(() => undefined);

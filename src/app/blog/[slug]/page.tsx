@@ -14,16 +14,20 @@ import { PostCard } from "@/components/blog/PostCard";
 type Params = Promise<{ slug: string }>;
 
 /**
- * Pre-render the 50 most recent posts at build time; the rest render on first
- * request. If the database is unreachable during the build, fall back to
- * rendering everything on demand rather than failing the whole deploy.
+ * Pre-render the 24 most recent posts at build time; the rest render on first
+ * request and are then cached. Kept modest on purpose: every prerendered page
+ * is database round trips during the build, and the build machine may be in a
+ * different region from the database.
+ *
+ * If the database is unreachable during the build, fall back to rendering
+ * everything on demand rather than failing the whole deploy.
  */
 export async function generateStaticParams() {
   try {
     const posts = await prisma.post.findMany({
       where: { status: "PUBLISHED" },
       orderBy: { publishedAt: "desc" },
-      take: 50,
+      take: 24,
       select: { slug: true },
     });
     return posts.map(({ slug }) => ({ slug }));
